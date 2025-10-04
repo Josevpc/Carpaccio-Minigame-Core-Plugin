@@ -13,6 +13,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
+// From: https://pastebin.com/pv8JFXXL
+
 /**
  * This class is a region/cuboid from one location to another. It can be used for blocks protection and things like WorldEdit.
  * @author desht (Original code), KingFaris10 (Editor of code)
