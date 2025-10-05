@@ -2,3 +2,8 @@ name: MinigameCore
 version: '1.0-SNAPSHOT'
 main: carpaccio.minigameCore.MinigameCore
 api-version: '1.21'
+commands:
+  minicore:
+    description: Carpaccio Minigame Core configuration command.
+    usage: /<command> [wand|create|confirm|remove|start|stop|toggle|clear|info|list|update|startall|stopall|clearall|reload|stats]
+    permission: op

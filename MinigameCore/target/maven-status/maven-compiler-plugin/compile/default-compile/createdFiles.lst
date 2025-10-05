@@ -1,5 +1,12 @@
+carpaccio\minigameCore\utils\SelectionManager.class
+carpaccio\minigameCore\utils\RegionPreview.class
+carpaccio\minigameCore\commands\MiniCoreCommand.class
+carpaccio\minigameCore\core\SpawnArea.class
 carpaccio\minigameCore\utils\Cuboid$CuboidDirection.class
 carpaccio\minigameCore\utils\Cuboid$CuboidIterator.class
+carpaccio\minigameCore\utils\RegionPreview$2.class
 carpaccio\minigameCore\core\MobSpawnSystem.class
 carpaccio\minigameCore\MinigameCore.class
 carpaccio\minigameCore\utils\Cuboid.class
+carpaccio\minigameCore\core\MobSpawnManager.class
+carpaccio\minigameCore\utils\RegionPreview$1.class

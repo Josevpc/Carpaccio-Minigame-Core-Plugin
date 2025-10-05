@@ -1,7 +1,6 @@
 package carpaccio.minigameCore.core;
 
 import carpaccio.minigameCore.MinigameCore;
-import carpaccio.minigameCore.utils.Cuboid;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -10,7 +9,11 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.UUID;
+import java.util.Random;
 
 /**
  * Sistema de spawn de mobs em área delimitada (usando Cuboid)
@@ -20,106 +23,36 @@ public class MobSpawnSystem {
 
     private final MinigameCore plugin;
 
-    // Agora usamos Cuboid ao invés de pos1/pos2
-    private Cuboid region;
-    private Location pos1; // mantidos para compatibilidade com setters antigos
-    private Location pos2;
-
     private final Set<UUID> spawnedMobs;
+    private SpawnArea area;
+
     private int spawnTaskId;
     private int checkTaskId;
-
-    // Configurações
-    private int spawnInterval;
-    private int maxMobs;
-    private int checkInterval;
-    private EntityType[] allowedMobs;
     private boolean isActive;
 
     // ==========================================
     // CONSTRUTOR
     // ==========================================
 
-    public MobSpawnSystem(MinigameCore plugin) {
+    public MobSpawnSystem(MinigameCore plugin, SpawnArea area) {
         this.plugin = plugin;
+        this.area = area;
         this.spawnedMobs = new HashSet<>();
+
         this.spawnTaskId = -1;
         this.checkTaskId = -1;
         this.isActive = false;
-
-        // Configurações padrão
-        this.spawnInterval = 100; // 5s (20 ticks = 1s)
-        this.maxMobs = 20;
-        this.checkInterval = 20; // 1s
-        this.allowedMobs = new EntityType[]{
-                EntityType.COW, EntityType.SHEEP, EntityType.PIG,
-                EntityType.CHICKEN, EntityType.RABBIT, EntityType.HORSE
-        };
     }
 
     // ==========================================
     // GETTERS / SETTERS
     // ==========================================
 
-    /** Retorna o Cuboid atual da região */
-    public Cuboid getRegion() {
-        return region;
-    }
+    /** Retorna o Spawn Area */
+    public SpawnArea getArea() { return area; }
 
-    /** Define o Cuboid diretamente */
-    public void setRegion(Cuboid region) {
-        this.region = region;
-    }
-
-    /** Atalho: define a área com duas posições e cria o Cuboid */
-    public void setArea(Location a, Location b) {
-        if (a == null || b == null) {
-            this.region = null;
-            this.pos1 = a;
-            this.pos2 = b;
-            return;
-        }
-        try {
-            this.region = new Cuboid(a, b); // valida mesmo mundo e normaliza limites
-            this.pos1 = a.clone();
-            this.pos2 = b.clone();
-        } catch (IllegalArgumentException ex) {
-            plugin.getLogger().warning("As posições da área precisam estar no mesmo mundo: " + ex.getMessage());
-            this.region = null;
-        }
-    }
-
-    /** Compat: primeira posição (armazenada e usada para construir o Cuboid quando possível) */
-    public Location getPosition1() { return pos1; }
-    public void setPosition1(Location location) {
-        this.pos1 = location != null ? location.clone() : null;
-        if (this.pos1 != null && this.pos2 != null) setArea(this.pos1, this.pos2);
-    }
-
-    /** Compat: segunda posição */
-    public Location getPosition2() { return pos2; }
-    public void setPosition2(Location location) {
-        this.pos2 = location != null ? location.clone() : null;
-        if (this.pos1 != null && this.pos2 != null) setArea(this.pos1, this.pos2);
-    }
-
-    public int getSpawnInterval() { return spawnInterval; }
-    public void setSpawnInterval(int ticks) {
-        this.spawnInterval = ticks;
-        if (isActive) restart();
-    }
-
-    public int getMaxMobs() { return maxMobs; }
-    public void setMaxMobs(int max) { this.maxMobs = max; }
-
-    public int getCheckInterval() { return checkInterval; }
-    public void setCheckInterval(int ticks) {
-        this.checkInterval = ticks;
-        if (isActive) restart();
-    }
-
-    public EntityType[] getAllowedMobs() { return allowedMobs; }
-    public void setAllowedMobs(EntityType... types) { this.allowedMobs = types; }
+    /** Define a Spawn Area diretamente */
+    public void setArea(SpawnArea area) { this.area = area; }
 
     public boolean isActive() { return isActive; }
     public int getMobCount() { return spawnedMobs.size(); }
@@ -134,21 +67,23 @@ public class MobSpawnSystem {
      * @return true se iniciado com sucesso, false se a área não foi definida
      */
     public boolean start() {
-        if (region == null) {
+        if (area.getRegion() == null) {
+            plugin.getLogger().info("Error, null Region!");
             return false;
         }
         if (isActive) stop();
 
         spawnTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
-            if (spawnedMobs.size() < maxMobs) {
+            if (spawnedMobs.size() < area.getMaxMobs()) {
                 spawnRandomMob();
             }
-        }, 0L, spawnInterval);
+        }, 0L, area.getSpawnInterval());
 
         checkTaskId = Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin,
-                this::checkMobsLocation, 0L, checkInterval);
+                this::checkMobsLocation, 0L, area.getCheckInterval());
 
         isActive = true;
+        plugin.getLogger().info("Spawning at: "+ area.getName());
         return true;
     }
 
@@ -199,12 +134,12 @@ public class MobSpawnSystem {
 
     /** Spawna um mob aleatório dentro do Cuboid */
     private void spawnRandomMob() {
-        if (region == null || allowedMobs == null || allowedMobs.length == 0) return;
+        if (area.getRegion() == null || area.getAllowedMobs() == null || area.getAllowedMobs().length == 0) return;
 
         Location spawnLoc = getRandomLocationInsideRegion();
         if (spawnLoc == null) return;
 
-        EntityType type = allowedMobs[new Random().nextInt(allowedMobs.length)];
+        EntityType type = area.getAllowedMobs()[new Random().nextInt(area.getAllowedMobs().length)];
         try {
             Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, type);
             if (entity instanceof LivingEntity) {
@@ -217,7 +152,7 @@ public class MobSpawnSystem {
 
     /** Verifica se os mobs ainda estão na área e remove os que saíram */
     private void checkMobsLocation() {
-        if (region == null) return;
+        if (area.getRegion() == null) return;
 
         Iterator<UUID> iterator = spawnedMobs.iterator();
         while (iterator.hasNext()) {
@@ -239,10 +174,10 @@ public class MobSpawnSystem {
 
     /** Pega uma localização aleatória dentro do Cuboid (X/Z) e ajusta Y pelo highestBlockYAt */
     private Location getRandomLocationInsideRegion() {
-        if (region == null) return null;
+        if (area.getRegion() == null) return null;
 
-        Location lower = region.getLowerNE(); // min XYZ
-        Location upper = region.getUpperSW(); // max XYZ
+        Location lower = area.getRegion().getLowerNE(); // min XYZ
+        Location upper = area.getRegion().getUpperSW(); // max XYZ
         World world = lower.getWorld();
 
         if (world == null) return null;
@@ -265,13 +200,13 @@ public class MobSpawnSystem {
 
     /** Testa se um ponto está dentro do Cuboid */
     private boolean isInsideRegion(Location loc) {
-        if (region == null || loc == null) return false;
+        if (area.getRegion() == null || loc == null) return false;
 
         // Garante mesmo mundo
-        Location lower = region.getLowerNE();
+        Location lower = area.getRegion().getLowerNE();
         if (loc.getWorld() == null || !loc.getWorld().equals(lower.getWorld())) return false;
 
-        Location upper = region.getUpperSW();
+        Location upper = area.getRegion().getUpperSW();
 
         int x = loc.getBlockX();
         int z = loc.getBlockZ();

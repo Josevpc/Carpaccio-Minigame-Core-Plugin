@@ -118,24 +118,18 @@ public class MobSpawnManager {
      * @return true se criado com sucesso
      */
     public boolean createArea(String name, Location pos1, Location pos2,
-                              EntityType[] mobs, int maxMobs, int spawnInterval) {
+                              EntityType[] mobs, int maxMobs, int spawnInterval, int checkInterval) {
 
         if (spawnAreas.containsKey(name)) {
             return false;
         }
 
         // Cria a área
-        SpawnArea area = new SpawnArea(name, pos1, pos2, mobs, maxMobs, spawnInterval);
+        SpawnArea area = new SpawnArea(name, pos1, pos2, mobs, maxMobs, spawnInterval, checkInterval);
         spawnAreas.put(name, area);
 
         // Cria o sistema
-        MobSpawnSystem system = new MobSpawnSystem(plugin);
-        system.setPosition1(pos1);
-        system.setPosition2(pos2);
-        system.setAllowedMobs(mobs);
-        system.setMaxMobs(maxMobs);
-        system.setSpawnInterval(spawnInterval);
-
+        MobSpawnSystem system = new MobSpawnSystem(plugin, area);
         spawnSystems.put(name, system);
 
         saveConfig();
@@ -218,14 +212,14 @@ public class MobSpawnManager {
      */
     public boolean updateArea(String name, int maxMobs, int spawnInterval) {
         MobSpawnSystem system = spawnSystems.get(name);
-        SpawnArea area = spawnAreas.get(name);
+        //SpawnArea area = spawnAreas.get(name);
 
-        if (system != null && area != null) {
-            system.setMaxMobs(maxMobs);
-            system.setSpawnInterval(spawnInterval);
+        if (system != null) {
+            system.getArea().setMaxMobs(maxMobs);
+            system.getArea().setSpawnInterval(spawnInterval);
 
-            area.setMaxMobs(maxMobs);
-            area.setSpawnInterval(spawnInterval);
+            //area.setMaxMobs(maxMobs);
+            //area.setSpawnInterval(spawnInterval);
 
             saveConfig();
             return true;
@@ -238,11 +232,11 @@ public class MobSpawnManager {
      */
     public boolean updateAreaMobs(String name, EntityType... mobs) {
         MobSpawnSystem system = spawnSystems.get(name);
-        SpawnArea area = spawnAreas.get(name);
+        //SpawnArea area = spawnAreas.get(name);
 
-        if (system != null && area != null) {
-            system.setAllowedMobs(mobs);
-            area.setAllowedMobs(mobs);
+        if (system != null) {
+            system.getArea().setAllowedMobs(mobs);
+            //area.setAllowedMobs(mobs);
 
             saveConfig();
             return true;
@@ -318,8 +312,8 @@ public class MobSpawnManager {
         StringBuilder info = new StringBuilder();
         info.append("§e=== Área: ").append(name).append(" ===\n");
         info.append("§6Status: ").append(system.isActive() ? "§aAtiva" : "§cInativa").append("\n");
-        info.append("§6Mobs: §f").append(system.getMobCount()).append("/").append(system.getMaxMobs()).append("\n");
-        info.append("§6Intervalo: §f").append(system.getSpawnInterval()).append(" ticks\n");
+        info.append("§6Mobs: §f").append(system.getMobCount()).append("/").append(system.getArea().getMaxMobs()).append("\n");
+        info.append("§6Intervalo: §f").append(system.getArea().getSpawnInterval()).append(" ticks\n");
         info.append("§6Tipos: §f").append(area.getMobTypesString());
 
         return info.toString();
@@ -335,7 +329,7 @@ public class MobSpawnManager {
             MobSpawnSystem system = spawnSystems.get(name);
             String status = system != null && system.isActive() ? "§aAtiva" : "§cInativa";
             int count = system != null ? system.getMobCount() : 0;
-            int max = system != null ? system.getMaxMobs() : 0;
+            int max = system != null ? system.getArea().getMaxMobs() : 0;
 
             list.add(String.format("§6%s §f- %s §f(%d/%d mobs)", name, status, count, max));
         }
@@ -402,18 +396,11 @@ public class MobSpawnManager {
                 boolean autoStart = areaConfig.getBoolean("auto-start", false);
                 int checkInterval = areaConfig.getInt("check-interval", 20);
 
-                SpawnArea area = new SpawnArea(areaName, pos1, pos2, mobs, maxMobs, spawnInterval);
+                SpawnArea area = new SpawnArea(areaName, pos1, pos2, mobs, maxMobs, spawnInterval, checkInterval);
                 spawnAreas.put(areaName, area);
 
                 // Cria e configura o sistema
-                MobSpawnSystem system = new MobSpawnSystem(plugin);
-                system.setPosition1(area.getPos1());
-                system.setPosition2(area.getPos2());
-                system.setAllowedMobs(area.getAllowedMobs());
-                system.setMaxMobs(area.getMaxMobs());
-                system.setSpawnInterval(area.getSpawnInterval());
-                system.setCheckInterval(area.getCheckInterval());
-
+                MobSpawnSystem system = new MobSpawnSystem(plugin, area);
                 spawnSystems.put(areaName, system);
 
                 // Auto-inicia se configurado

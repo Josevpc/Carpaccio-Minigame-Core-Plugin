@@ -35,7 +35,7 @@ public class SpawnArea {
      * Construtor completo
      */
     public SpawnArea(String name, Location pos1, Location pos2,
-                     EntityType[] allowedMobs, int maxMobs, int spawnInterval) {
+                     EntityType[] allowedMobs, int maxMobs, int spawnInterval, int checkInterval) {
         this.name = name;
         this.pos1 = pos1;
         this.pos2 = pos2;
@@ -44,6 +44,8 @@ public class SpawnArea {
         this.spawnInterval = spawnInterval;
         this.checkInterval = 20; // Padrão: 1 segundo
         this.autoStart = false;
+
+        setArea(this.pos1, this.pos2);
     }
 
     /**
@@ -52,7 +54,7 @@ public class SpawnArea {
     public SpawnArea(String name, Location pos1, Location pos2) {
         this(name, pos1, pos2,
                 new EntityType[]{EntityType.COW, EntityType.SHEEP, EntityType.PIG},
-                20, 100);
+                20, 100, 20);
     }
 
     /**
@@ -60,8 +62,8 @@ public class SpawnArea {
      */
     public SpawnArea(String name, Location pos1, Location pos2,
                      EntityType[] allowedMobs, int maxMobs,
-                     int spawnInterval, boolean autoStart) {
-        this(name, pos1, pos2, allowedMobs, maxMobs, spawnInterval);
+                     int spawnInterval, int checkInterval, boolean autoStart) {
+        this(name, pos1, pos2, allowedMobs, maxMobs, spawnInterval, checkInterval);
         this.autoStart = autoStart;
     }
 
@@ -72,70 +74,50 @@ public class SpawnArea {
     /**
      * Obtém o nome da área
      */
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
 
     /** Retorna o Cuboid atual da região */
-    public Cuboid getRegion() {
-        return region;
-    }
+    public Cuboid getRegion() { return region; }
 
     /**
      * Obtém a primeira posição
      */
-    public Location getPos1() {
-        return pos1;
-    }
+    public Location getPos1() { return pos1; }
 
     /**
      * Obtém a segunda posição
      */
-    public Location getPos2() {
-        return pos2;
-    }
+    public Location getPos2() { return pos2; }
 
     /**
      * Obtém os tipos de mobs permitidos
      */
-    public EntityType[] getAllowedMobs() {
-        return allowedMobs;
-    }
+    public EntityType[] getAllowedMobs() { return allowedMobs; }
 
     /**
      * Obtém o número máximo de mobs
      */
-    public int getMaxMobs() {
-        return maxMobs;
-    }
+    public int getMaxMobs() { return maxMobs; }
 
     /**
      * Obtém o intervalo de spawn em ticks
      */
-    public int getSpawnInterval() {
-        return spawnInterval;
-    }
+    public int getSpawnInterval() { return spawnInterval; }
 
     /**
      * Obtém o intervalo de verificação em ticks
      */
-    public int getCheckInterval() {
-        return checkInterval;
-    }
+    public int getCheckInterval() { return checkInterval; }
 
     /**
      * Verifica se deve iniciar automaticamente
      */
-    public boolean isAutoStart() {
-        return autoStart;
-    }
+    public boolean isAutoStart() { return autoStart; }
 
     /**
      * Obtém o nome do mundo da área
      */
-    public String getWorldName() {
-        return pos1 != null ? pos1.getWorld().getName() : null;
-    }
+    public String getWorldName() { return pos1 != null ? pos1.getWorld().getName() : null; }
 
     // ==========================================
     // SETTERS
@@ -147,47 +129,67 @@ public class SpawnArea {
         this.region = region;
     }
 
+    /** Atalho: define a área com duas posições e cria o Cuboid */
+    public void setArea(Location a, Location b) {
+        if (a == null || b == null) {
+            this.region = null;
+            this.pos1 = a;
+            this.pos2 = b;
+            return;
+        }
+        try {
+            this.region = new Cuboid(a, b); // valida mesmo mundo e normaliza limites
+            this.pos1 = a.clone();
+            this.pos2 = b.clone();
+        } catch (IllegalArgumentException ex) {
+            //plugin.getLogger().warning("As posições da área precisam estar no mesmo mundo: " + ex.getMessage());
+            this.region = null;
+        }
+    }
+
     /**
      * Define a primeira posição
      */
 
-    public void setPos1(Location pos1) {
-        this.pos1 = pos1;
+    public void setPos1(Location location) {
+        this.pos1 = location != null ? location.clone() : null;
+        if (this.pos1 != null && this.pos2 != null) setArea(this.pos1, this.pos2);
     }
 
     /**
      * Define a segunda posição
      */
-    public void setPos2(Location pos2) {
-        this.pos2 = pos2;
+    public void setPos2(Location location) {
+        this.pos2 = location != null ? location.clone() : null;
+        if (this.pos1 != null && this.pos2 != null) setArea(this.pos1, this.pos2);
     }
 
     /**
      * Define os tipos de mobs permitidos
      */
-    public void setAllowedMobs(EntityType... allowedMobs) {
-        this.allowedMobs = allowedMobs;
+    public void setAllowedMobs(EntityType... types) {
+        this.allowedMobs = types;
     }
 
     /**
      * Define o número máximo de mobs
      */
-    public void setMaxMobs(int maxMobs) {
-        this.maxMobs = maxMobs;
+    public void setMaxMobs(int max) {
+        this.maxMobs = max;
     }
 
     /**
      * Define o intervalo de spawn
      */
-    public void setSpawnInterval(int spawnInterval) {
-        this.spawnInterval = spawnInterval;
+    public void setSpawnInterval(int ticks) {
+        this.spawnInterval = ticks;
     }
 
     /**
      * Define o intervalo de verificação
      */
-    public void setCheckInterval(int checkInterval) {
-        this.checkInterval = checkInterval;
+    public void setCheckInterval(int ticks) {
+        this.checkInterval = ticks;
     }
 
     /**
@@ -247,74 +249,6 @@ public class SpawnArea {
     }
 
     /**
-     * Verifica se uma localização está dentro da área
-     */
-    public boolean contains(Location loc) {
-        if (pos1 == null || pos2 == null || loc == null) {
-            return false;
-        }
-
-        if (!loc.getWorld().equals(pos1.getWorld())) {
-            return false;
-        }
-
-        int minX = Math.min(pos1.getBlockX(), pos2.getBlockX());
-        int maxX = Math.max(pos1.getBlockX(), pos2.getBlockX());
-        int minY = Math.min(pos1.getBlockY(), pos2.getBlockY());
-        int maxY = Math.max(pos1.getBlockY(), pos2.getBlockY());
-        int minZ = Math.min(pos1.getBlockZ(), pos2.getBlockZ());
-        int maxZ = Math.max(pos1.getBlockZ(), pos2.getBlockZ());
-
-        return loc.getBlockX() >= minX && loc.getBlockX() <= maxX &&
-                loc.getBlockY() >= minY && loc.getBlockY() <= maxY &&
-                loc.getBlockZ() >= minZ && loc.getBlockZ() <= maxZ;
-    }
-
-    /**
-     * Calcula o volume da área (em blocos)
-     */
-    public int getVolume() {
-        if (pos1 == null || pos2 == null) {
-            return 0;
-        }
-
-        int dx = Math.abs(pos1.getBlockX() - pos2.getBlockX()) + 1;
-        int dy = Math.abs(pos1.getBlockY() - pos2.getBlockY()) + 1;
-        int dz = Math.abs(pos1.getBlockZ() - pos2.getBlockZ()) + 1;
-
-        return dx * dy * dz;
-    }
-
-    /**
-     * Calcula a área da base (em blocos)
-     */
-    public int getBaseArea() {
-        if (pos1 == null || pos2 == null) {
-            return 0;
-        }
-
-        int dx = Math.abs(pos1.getBlockX() - pos2.getBlockX()) + 1;
-        int dz = Math.abs(pos1.getBlockZ() - pos2.getBlockZ()) + 1;
-
-        return dx * dz;
-    }
-
-    /**
-     * Obtém o centro da área
-     */
-    public Location getCenter() {
-        if (pos1 == null || pos2 == null) {
-            return null;
-        }
-
-        double x = (pos1.getX() + pos2.getX()) / 2;
-        double y = (pos1.getY() + pos2.getY()) / 2;
-        double z = (pos1.getZ() + pos2.getZ()) / 2;
-
-        return new Location(pos1.getWorld(), x, y, z);
-    }
-
-    /**
      * Valida se a área está configurada corretamente
      */
     public boolean isValid() {
@@ -339,6 +273,7 @@ public class SpawnArea {
                 allowedMobs.clone(),
                 maxMobs,
                 spawnInterval,
+                checkInterval,
                 autoStart
         );
         copy.setCheckInterval(checkInterval);
@@ -367,7 +302,7 @@ public class SpawnArea {
         info.append("§6Mundo: §f").append(getWorldName()).append("\n");
         info.append("§6Posição 1: §f").append(formatLocation(pos1)).append("\n");
         info.append("§6Posição 2: §f").append(formatLocation(pos2)).append("\n");
-        info.append("§6Volume: §f").append(getVolume()).append(" blocos\n");
+        info.append("§6Volume: §f").append(region.getVolume()).append(" blocos\n");
         info.append("§6Mobs: §f").append(getMobTypesFormatted()).append("\n");
         info.append("§6Max Mobs: §f").append(maxMobs).append("\n");
         info.append("§6Intervalo: §f").append(spawnInterval).append(" ticks\n");
