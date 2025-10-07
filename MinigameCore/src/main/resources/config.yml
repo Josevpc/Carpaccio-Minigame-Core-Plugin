@@ -1,0 +1,147 @@
+# config.yml - Exemplo de configuração
+
+# Tabelas de Loot
+loot_tables:
+  zombie_boss:
+    items:
+      - material: DIAMOND_SWORD
+        min_amount: 1
+        max_amount: 1
+        drop_chance: 0.15  # 15% de chance
+        display_name: "&c&lEspada do Zumbi Rei"
+        lore:
+          - "&7Uma espada amaldiçoada"
+          - "&7forjada nas trevas"
+        enchantments:
+          - DAMAGE_ALL:5
+          - FIRE_ASPECT:2
+
+      - material: GOLD_INGOT
+        min_amount: 5
+        max_amount: 15
+        drop_chance: 0.80  # 80% de chance
+
+      - material: ROTTEN_FLESH
+        min_amount: 10
+        max_amount: 25
+        drop_chance: 1.0  # 100% de chance
+
+      - material: EMERALD
+        min_amount: 1
+        max_amount: 3
+        drop_chance: 0.25  # 25% de chance
+
+  skeleton_archer:
+    items:
+      - material: BOW
+        min_amount: 1
+        max_amount: 1
+        drop_chance: 0.30
+        display_name: "&e&lArco Élfico"
+        enchantments:
+          - ARROW_DAMAGE:4
+          - ARROW_INFINITE:1
+
+      - material: ARROW
+        min_amount: 16
+        max_amount: 64
+        drop_chance: 0.90
+
+      - material: BONE
+        min_amount: 5
+        max_amount: 10
+        drop_chance: 1.0
+
+  spider_queen:
+    items:
+      - material: SPIDER_EYE
+        min_amount: 3
+        max_amount: 8
+        drop_chance: 1.0
+
+      - material: STRING
+        min_amount: 10
+        max_amount: 20
+        drop_chance: 1.0
+
+      - material: ENCHANTED_BOOK
+        min_amount: 1
+        max_amount: 1
+        drop_chance: 0.10
+        display_name: "&5Livro da Teia"
+        lore:
+          - "&7Um livro misterioso"
+
+# Mobs Customizados
+custom_mobs:
+  zombie_king:
+    entity_type: ZOMBIE
+    display_name: "&c&lRei Zumbi"
+    health: 200.0
+    damage: 15.0
+    speed: 0.3
+    loot_table: zombie_boss
+    equipment:
+      helmet:
+        material: DIAMOND_HELMET
+        enchantments:
+          - PROTECTION_ENVIRONMENTAL:4
+      chestplate:
+        material: DIAMOND_CHESTPLATE
+        enchantments:
+          - PROTECTION_ENVIRONMENTAL:4
+      leggings:
+        material: DIAMOND_LEGGINGS
+        enchantments:
+          - PROTECTION_ENVIRONMENTAL:4
+      boots:
+        material: DIAMOND_BOOTS
+        enchantments:
+          - PROTECTION_ENVIRONMENTAL:4
+      main_hand:
+        material: DIAMOND_SWORD
+        enchantments:
+          - DAMAGE_ALL:5
+    potion_effects:
+      - type: INCREASE_DAMAGE
+        duration: 999999
+        amplifier: 1
+      - type: DAMAGE_RESISTANCE
+        duration: 999999
+        amplifier: 0
+
+  elite_skeleton:
+    entity_type: SKELETON
+    display_name: "&e&lArqueiro Élfico"
+    health: 80.0
+    damage: 10.0
+    speed: 0.28
+    loot_table: skeleton_archer
+    equipment:
+      helmet:
+        material: GOLDEN_HELMET
+        enchantments:
+          - PROTECTION_ENVIRONMENTAL:3
+      main_hand:
+        material: BOW
+        enchantments:
+          - ARROW_DAMAGE:3
+    potion_effects:
+      - type: SPEED
+        duration: 999999
+        amplifier: 1
+
+  giant_spider:
+    entity_type: SPIDER
+    display_name: "&4&lRainha Aranha"
+    health: 150.0
+    damage: 12.0
+    speed: 0.35
+    loot_table: spider_queen
+    potion_effects:
+      - type: SPEED
+        duration: 999999
+        amplifier: 2
+      - type: REGENERATION
+        duration: 999999
+        amplifier: 0

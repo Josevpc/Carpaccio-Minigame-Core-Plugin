@@ -1,8 +1,8 @@
 package carpaccio.minigameCore.core;
 
+import carpaccio.minigameCore.core.mobs.CustomMob;
 import carpaccio.minigameCore.utils.Cuboid;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -17,14 +17,17 @@ public class SpawnArea {
     // ATRIBUTOS
     // ==========================================
 
-    private final String name;
+    private final String regionName;
     private Cuboid region;
     private Location pos1;
     private Location pos2;
-    private EntityType[] allowedMobs;
+
+    private String[] mobList;
     private int maxMobs;
+
     private int spawnInterval;
     private int checkInterval;
+    // Tirar
     private boolean autoStart;
 
     // ==========================================
@@ -35,11 +38,11 @@ public class SpawnArea {
      * Construtor completo
      */
     public SpawnArea(String name, Location pos1, Location pos2,
-                     EntityType[] allowedMobs, int maxMobs, int spawnInterval, int checkInterval) {
-        this.name = name;
+                     String[] mobList, int maxMobs, int spawnInterval, int checkInterval) {
+        this.regionName = name;
         this.pos1 = pos1;
         this.pos2 = pos2;
-        this.allowedMobs = allowedMobs;
+        this.mobList = mobList;
         this.maxMobs = maxMobs;
         this.spawnInterval = spawnInterval;
         this.checkInterval = 20; // Padrão: 1 segundo
@@ -53,7 +56,7 @@ public class SpawnArea {
      */
     public SpawnArea(String name, Location pos1, Location pos2) {
         this(name, pos1, pos2,
-                new EntityType[]{EntityType.COW, EntityType.SHEEP, EntityType.PIG},
+                new String[]{},
                 20, 100, 20);
     }
 
@@ -61,9 +64,9 @@ public class SpawnArea {
      * Construtor com auto-start
      */
     public SpawnArea(String name, Location pos1, Location pos2,
-                     EntityType[] allowedMobs, int maxMobs,
+                     String[] mobList, int maxMobs,
                      int spawnInterval, int checkInterval, boolean autoStart) {
-        this(name, pos1, pos2, allowedMobs, maxMobs, spawnInterval, checkInterval);
+        this(name, pos1, pos2, mobList, maxMobs, spawnInterval, checkInterval);
         this.autoStart = autoStart;
     }
 
@@ -74,7 +77,7 @@ public class SpawnArea {
     /**
      * Obtém o nome da área
      */
-    public String getName() { return name; }
+    public String getRegionName() { return regionName; }
 
     /** Retorna o Cuboid atual da região */
     public Cuboid getRegion() { return region; }
@@ -92,7 +95,7 @@ public class SpawnArea {
     /**
      * Obtém os tipos de mobs permitidos
      */
-    public EntityType[] getAllowedMobs() { return allowedMobs; }
+    public String[] getMobList() { return mobList; }
 
     /**
      * Obtém o número máximo de mobs
@@ -167,8 +170,8 @@ public class SpawnArea {
     /**
      * Define os tipos de mobs permitidos
      */
-    public void setAllowedMobs(EntityType... types) {
-        this.allowedMobs = types;
+    public void setMobList(String... ids) {
+        this.mobList = ids;
     }
 
     /**
@@ -204,58 +207,40 @@ public class SpawnArea {
     // ==========================================
 
     /**
-     * Obtém os tipos de mobs como string formatada
-     */
-    public String getMobTypesString() {
-        return Arrays.stream(allowedMobs)
-                .map(Enum::name)
-                .collect(Collectors.joining(", "));
-    }
-
-    /**
-     * Obtém os tipos de mobs como string formatada (versão bonita)
-     */
-    public String getMobTypesFormatted() {
-        return Arrays.stream(allowedMobs)
-                .map(type -> formatMobName(type.name()))
-                .collect(Collectors.joining(", "));
-    }
-
-    /**
      * Verifica se um tipo de mob é permitido
      */
-    public boolean isMobAllowed(EntityType type) {
-        return Arrays.asList(allowedMobs).contains(type);
+    public boolean isMobAllowed(String id) {
+        return Arrays.asList(mobList).contains(id);
     }
 
     /**
      * Adiciona um tipo de mob à lista de permitidos
      */
-    public void addMobType(EntityType type) {
-        if (!isMobAllowed(type)) {
-            EntityType[] newArray = Arrays.copyOf(allowedMobs, allowedMobs.length + 1);
-            newArray[allowedMobs.length] = type;
-            allowedMobs = newArray;
+    public void addMob(String id) {
+        if (!isMobAllowed(id)) {
+            String[] newArray = Arrays.copyOf(mobList, mobList.length + 1);
+            newArray[mobList.length] = id;
+            mobList = newArray;
         }
     }
 
     /**
      * Remove um tipo de mob da lista de permitidos
      */
-    public void removeMobType(EntityType type) {
-        allowedMobs = Arrays.stream(allowedMobs)
-                .filter(t -> t != type)
-                .toArray(EntityType[]::new);
+    public void removeMob(String id) {
+        mobList = Arrays.stream(mobList)
+                .filter(t -> t != id)
+                .toArray(String[]::new);
     }
 
     /**
      * Valida se a área está configurada corretamente
      */
     public boolean isValid() {
-        if (name == null || name.isEmpty()) return false;
+        if (regionName == null || regionName.isEmpty()) return false;
         if (pos1 == null || pos2 == null) return false;
         if (!pos1.getWorld().equals(pos2.getWorld())) return false;
-        if (allowedMobs == null || allowedMobs.length == 0) return false;
+        if (mobList == null || mobList.length == 0) return false;
         if (maxMobs <= 0) return false;
         if (spawnInterval <= 0) return false;
 
@@ -267,10 +252,10 @@ public class SpawnArea {
      */
     public SpawnArea clone() {
         SpawnArea copy = new SpawnArea(
-                name,
+                regionName,
                 pos1.clone(),
                 pos2.clone(),
-                allowedMobs.clone(),
+                mobList.clone(),
                 maxMobs,
                 spawnInterval,
                 checkInterval,
@@ -298,12 +283,12 @@ public class SpawnArea {
      */
     public String getInfo() {
         StringBuilder info = new StringBuilder();
-        info.append("§e=== ").append(name).append(" ===\n");
+        info.append("§e=== ").append(regionName).append(" ===\n");
         info.append("§6Mundo: §f").append(getWorldName()).append("\n");
         info.append("§6Posição 1: §f").append(formatLocation(pos1)).append("\n");
         info.append("§6Posição 2: §f").append(formatLocation(pos2)).append("\n");
         info.append("§6Volume: §f").append(region.getVolume()).append(" blocos\n");
-        info.append("§6Mobs: §f").append(getMobTypesFormatted()).append("\n");
+        info.append("§6Mobs: §f").append(mobList).append("\n");
         info.append("§6Max Mobs: §f").append(maxMobs).append("\n");
         info.append("§6Intervalo: §f").append(spawnInterval).append(" ticks\n");
         info.append("§6Auto-Start: §f").append(autoStart ? "§aSim" : "§cNão");
@@ -316,7 +301,7 @@ public class SpawnArea {
      */
     public String getSummary() {
         return String.format("§6%s §f[%s] - %d mobs, %dt interval",
-                name, getWorldName(), maxMobs, spawnInterval);
+                regionName, getWorldName(), maxMobs, spawnInterval);
     }
 
     /**
@@ -333,7 +318,7 @@ public class SpawnArea {
 
     @Override
     public String toString() {
-        return "SpawnArea{name='" + name + "', mobs=" + allowedMobs.length +
+        return "SpawnArea{name='" + regionName + "', mobs=" + mobList.length +
                 ", max=" + maxMobs + ", interval=" + spawnInterval + "}";
     }
 
@@ -343,11 +328,11 @@ public class SpawnArea {
         if (obj == null || getClass() != obj.getClass()) return false;
 
         SpawnArea other = (SpawnArea) obj;
-        return name.equals(other.name);
+        return regionName.equals(other.regionName);
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return regionName.hashCode();
     }
 }

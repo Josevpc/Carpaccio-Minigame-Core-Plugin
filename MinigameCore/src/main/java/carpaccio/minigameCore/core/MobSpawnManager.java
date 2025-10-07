@@ -1,9 +1,9 @@
 package carpaccio.minigameCore.core;
 
 import carpaccio.minigameCore.MinigameCore;
-import carpaccio.minigameCore.core.MobSpawnSystem;
-import carpaccio.minigameCore.core.SpawnArea;
 
+import carpaccio.minigameCore.core.mobs.MobManager;
+import carpaccio.minigameCore.manager.ConfigManager;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -27,6 +27,8 @@ public class MobSpawnManager {
     private final File configFile;
     private FileConfiguration config;
 
+    private final MobManager mobManager;
+
     // ==========================================
     // CONSTRUTOR
     // ==========================================
@@ -36,11 +38,13 @@ public class MobSpawnManager {
      *
      * @param plugin Instância do plugin principal
      */
-    public MobSpawnManager(MinigameCore plugin) {
+    public MobSpawnManager(MinigameCore plugin, MobManager mobManager) {
         this.plugin = plugin;
         this.spawnSystems = new HashMap<>();
         this.spawnAreas = new HashMap<>();
         this.configFile = new File(plugin.getDataFolder(), "spawn_areas.yml");
+
+        this.mobManager = mobManager;
 
         loadConfig();
     }
@@ -112,24 +116,24 @@ public class MobSpawnManager {
      * @param name          Nome da área
      * @param pos1          Primeira posição
      * @param pos2          Segunda posição
-     * @param mobs          Tipos de mobs permitidos
+     * @param mobList       id dos mobs gerados
      * @param maxMobs       Máximo de mobs
      * @param spawnInterval Intervalo de spawn em ticks
      * @return true se criado com sucesso
      */
     public boolean createArea(String name, Location pos1, Location pos2,
-                              EntityType[] mobs, int maxMobs, int spawnInterval, int checkInterval) {
+                              String[] mobList, int maxMobs, int spawnInterval, int checkInterval) {
 
         if (spawnAreas.containsKey(name)) {
             return false;
         }
 
         // Cria a área
-        SpawnArea area = new SpawnArea(name, pos1, pos2, mobs, maxMobs, spawnInterval, checkInterval);
+        SpawnArea area = new SpawnArea(name, pos1, pos2, mobList, maxMobs, spawnInterval, checkInterval);
         spawnAreas.put(name, area);
 
         // Cria o sistema
-        MobSpawnSystem system = new MobSpawnSystem(plugin, area);
+        MobSpawnSystem system = new MobSpawnSystem(plugin, area, mobManager);
         spawnSystems.put(name, system);
 
         saveConfig();
@@ -228,14 +232,14 @@ public class MobSpawnManager {
     }
 
     /**
-     * Atualiza os mobs permitidos de uma área
+     * Atualiza os mobs gerados de uma área
      */
-    public boolean updateAreaMobs(String name, EntityType... mobs) {
+    public boolean updateAreaMobs(String name, String... mob_id) {
         MobSpawnSystem system = spawnSystems.get(name);
         //SpawnArea area = spawnAreas.get(name);
 
         if (system != null) {
-            system.getArea().setAllowedMobs(mobs);
+            system.getArea().setMobList(mob_id);
             //area.setAllowedMobs(mobs);
 
             saveConfig();
@@ -314,7 +318,7 @@ public class MobSpawnManager {
         info.append("§6Status: ").append(system.isActive() ? "§aAtiva" : "§cInativa").append("\n");
         info.append("§6Mobs: §f").append(system.getMobCount()).append("/").append(system.getArea().getMaxMobs()).append("\n");
         info.append("§6Intervalo: §f").append(system.getArea().getSpawnInterval()).append(" ticks\n");
-        info.append("§6Tipos: §f").append(area.getMobTypesString());
+        info.append("§6Mobs: §f").append(area.getMobList());
 
         return info.toString();
     }
@@ -365,6 +369,7 @@ public class MobSpawnManager {
      * Carrega as áreas do arquivo de configuração
      */
     private void loadConfig() {
+
         if (!configFile.exists()) {
             plugin.saveResource("spawn_areas.yml", false);
         }
@@ -385,10 +390,7 @@ public class MobSpawnManager {
                 Location pos2 = loadLocation(areaConfig.getConfigurationSection("pos2"));
 
                 // Carrega os mobs
-                List<String> mobsList = areaConfig.getStringList("mobs");
-                EntityType[] mobs = mobsList.stream()
-                        .map(EntityType::valueOf)
-                        .toArray(EntityType[]::new);
+                String[] mobsList = areaConfig.getStringList("mobs").toArray(new String[0]);
 
                 // Carrega configurações
                 int maxMobs = areaConfig.getInt("max-mobs", 20);
@@ -396,11 +398,11 @@ public class MobSpawnManager {
                 boolean autoStart = areaConfig.getBoolean("auto-start", false);
                 int checkInterval = areaConfig.getInt("check-interval", 20);
 
-                SpawnArea area = new SpawnArea(areaName, pos1, pos2, mobs, maxMobs, spawnInterval, checkInterval);
+                SpawnArea area = new SpawnArea(areaName, pos1, pos2, mobsList, maxMobs, spawnInterval, checkInterval);
                 spawnAreas.put(areaName, area);
 
                 // Cria e configura o sistema
-                MobSpawnSystem system = new MobSpawnSystem(plugin, area);
+                MobSpawnSystem system = new MobSpawnSystem(plugin, area, mobManager);
                 spawnSystems.put(areaName, system);
 
                 // Auto-inicia se configurado
@@ -432,9 +434,7 @@ public class MobSpawnManager {
             saveLocation(config, path + ".pos2", area.getPos2());
 
             // Salva mobs
-            List<String> mobsList = Arrays.stream(area.getAllowedMobs())
-                    .map(Enum::name)
-                    .collect(Collectors.toList());
+            String[] mobsList = area.getMobList();
             config.set(path + ".mobs", mobsList);
 
             // Salva configurações

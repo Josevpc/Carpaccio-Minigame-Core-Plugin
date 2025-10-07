@@ -9,7 +9,6 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 public class MiniCoreCommand implements CommandExecutor {
@@ -170,7 +169,7 @@ public class MiniCoreCommand implements CommandExecutor {
             return;
         }
 
-        EntityType[] mobs = {EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN};
+        String[] mobs = {};
         boolean created = spawnManager.createArea(name, pos1, pos2, mobs, 20, 100, 10);
 
         if (created) {

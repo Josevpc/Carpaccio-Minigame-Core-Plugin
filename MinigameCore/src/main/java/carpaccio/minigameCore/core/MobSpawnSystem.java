@@ -2,6 +2,7 @@ package carpaccio.minigameCore.core;
 
 import carpaccio.minigameCore.MinigameCore;
 
+import carpaccio.minigameCore.core.mobs.MobManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -25,6 +26,7 @@ public class MobSpawnSystem {
 
     private final Set<UUID> spawnedMobs;
     private SpawnArea area;
+    private final MobManager mobManager;
 
     private int spawnTaskId;
     private int checkTaskId;
@@ -34,10 +36,12 @@ public class MobSpawnSystem {
     // CONSTRUTOR
     // ==========================================
 
-    public MobSpawnSystem(MinigameCore plugin, SpawnArea area) {
+    public MobSpawnSystem(MinigameCore plugin, SpawnArea area, MobManager mobManager) {
         this.plugin = plugin;
-        this.area = area;
+
         this.spawnedMobs = new HashSet<>();
+        this.area = area;
+        this.mobManager = mobManager;
 
         this.spawnTaskId = -1;
         this.checkTaskId = -1;
@@ -83,7 +87,7 @@ public class MobSpawnSystem {
                 this::checkMobsLocation, 0L, area.getCheckInterval());
 
         isActive = true;
-        plugin.getLogger().info("Spawning at: "+ area.getName());
+        plugin.getLogger().info("Spawning at: "+ area.getRegionName());
         return true;
     }
 
@@ -115,6 +119,7 @@ public class MobSpawnSystem {
             Entity entity = Bukkit.getEntity(uuid);
             if (entity != null) {
                 entity.remove();
+                mobManager.untrackMob(entity);
                 count++;
             }
         }
@@ -134,16 +139,17 @@ public class MobSpawnSystem {
 
     /** Spawna um mob aleatório dentro do Cuboid */
     private void spawnRandomMob() {
-        if (area.getRegion() == null || area.getAllowedMobs() == null || area.getAllowedMobs().length == 0) return;
+        if (area.getRegion() == null || area.getMobList() == null || area.getMobList().length == 0) return;
 
         Location spawnLoc = getRandomLocationInsideRegion();
         if (spawnLoc == null) return;
 
-        EntityType type = area.getAllowedMobs()[new Random().nextInt(area.getAllowedMobs().length)];
+        String mobId = area.getMobList()[new Random().nextInt(area.getMobList().length)];
         try {
-            Entity entity = spawnLoc.getWorld().spawnEntity(spawnLoc, type);
+            Entity entity = mobManager.getCustomMob(mobId).spawn(spawnLoc);
             if (entity instanceof LivingEntity) {
                 spawnedMobs.add(entity.getUniqueId());
+                mobManager.trackSpawnedMob(entity, mobId);
             }
         } catch (Exception e) {
             plugin.getLogger().warning("Erro ao spawnar mob: " + e.getMessage());
@@ -166,6 +172,7 @@ public class MobSpawnSystem {
 
             Location loc = entity.getLocation();
             if (!isInsideRegion(loc)) {
+                mobManager.untrackMob(entity);
                 entity.remove();
                 iterator.remove();
             }
